@@ -24,7 +24,7 @@ class GeofenceTransitionsJobIntentService : JobIntentService(), CoroutineScope {
         get() = Dispatchers.IO + coroutineJob
 
     companion object {
-        private const val JOB_ID = 573
+        private const val JOB_ID = 567
 
         fun enqueueWork(context: Context, intent: Intent) {
             enqueueWork(
@@ -57,6 +57,7 @@ class GeofenceTransitionsJobIntentService : JobIntentService(), CoroutineScope {
             CoroutineScope(coroutineContext).launch(SupervisorJob()) {
                 val result = remindersLocalRepository.getReminder(requestId)
                 if (result is Result.Success<ReminderDTO>) {
+                    Log.d("GeofenceTransitionsJob", "${result.data.title}")
                     val reminderDTO = result.data
                     sendNotification(
                         this@GeofenceTransitionsJobIntentService, ReminderDataItem(
@@ -69,6 +70,7 @@ class GeofenceTransitionsJobIntentService : JobIntentService(), CoroutineScope {
                         )
                     )
                 }
+                Log.d("GeofenceTransitionsJob", "Enter: not found")
             }
         }
     }

@@ -40,7 +40,7 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
                 context = context,
                 intent = intent
             )
-            Log.i(TAG, "${intent.action} is not supported")
+            Log.i(TAG, "${intent.action} is supported")
         }else {
             Log.i(TAG, "${intent.action} is not supported")
         }
