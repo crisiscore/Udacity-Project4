@@ -2,6 +2,7 @@ package com.udacity.project4.authentication
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.observe
@@ -11,6 +12,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.udacity.project4.R
 import com.udacity.project4.locationreminders.RemindersActivity
 import kotlinx.android.synthetic.main.activity_authentication.*
+
 
 /**
  * This class should be the starting point of the app, It asks the users to sign in / register, and redirects the
@@ -34,8 +36,10 @@ class AuthenticationActivity : AppCompatActivity() {
 
     private fun initViewModel() {
         authenticationViewModel = ViewModelProvider(this)[AuthenticationViewModel::class.java]
-        authenticationViewModel.user.observe(this ) { currentUser ->
-            goToReminderList()
+        authenticationViewModel.user.observe(this) { currentUser ->
+            if (currentUser != null) {
+                goToReminderList()
+            }
         }
 
     }
@@ -57,12 +61,15 @@ class AuthenticationActivity : AppCompatActivity() {
         val signInIntent = AuthUI.getInstance().createSignInIntentBuilder()
             .setAvailableProviders(providers)
             .setTheme(R.style.AppTheme)
+            .setIsSmartLockEnabled(false)
             .build()
         signInLauncher.launch(signInIntent)
+
     }
 
     private val signInLauncher = registerForActivityResult(FirebaseAuthUIActivityResultContract())
     { authenticationResult ->
+        Log.e("AuthenticationActivity", "onActivityResult: $authenticationResult")
         authenticationViewModel.onSignInResult(authenticationResult)
     }
 }
