@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.view.*
 import androidx.core.app.ActivityCompat
 import androidx.databinding.DataBindingUtil
+import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -30,7 +31,10 @@ class SelectLocationFragment : BaseFragment(), OnMapReadyCallback {
     override val _viewModel: SaveReminderViewModel by inject()
     private lateinit var binding: FragmentSelectLocationBinding
     private lateinit var map: GoogleMap
-    private var mLatLng : LatLng? = null
+    private var mLatLng: LatLng? = null
+    private val fusedLocationProviderClient by lazy {
+        LocationServices.getFusedLocationProviderClient(requireActivity())
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -97,7 +101,8 @@ class SelectLocationFragment : BaseFragment(), OnMapReadyCallback {
                 MapStyleOptions.loadRawResourceStyle(
                     requireContext(),
                     R.raw.map_style
-                ))
+                )
+            )
             enableMyLocation()
             setPoiClick(map)
             setOnClick(map)
@@ -129,18 +134,32 @@ class SelectLocationFragment : BaseFragment(), OnMapReadyCallback {
         ) {
             ActivityCompat.requestPermissions(
                 requireActivity(),
-                arrayOf<String>(Manifest.permission.ACCESS_FINE_LOCATION),
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
                 REQUEST_LOCATION_PERMISSION
             )
         }
-        map.setMyLocationEnabled(true)
+        map.isMyLocationEnabled = true
+        fusedLocationProviderClient.lastLocation.addOnSuccessListener { location ->
+            if (location != null) {
+                val currentLatLng = LatLng(location.latitude, location.longitude)
+                map.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 15f))
+
+                // add marker to current location
+                val markerOptions = MarkerOptions()
+                    .position(currentLatLng)
+                    .title("Current Location")
+                map.clear()
+                val poiMarker = map.addMarker(markerOptions)
+                poiMarker?.showInfoWindow()
+            }
+        }
     }
 
     private fun setPoiClick(map: GoogleMap) {
         map.setOnPoiClickListener { poi ->
             mLatLng = poi.latLng
             map.clear()
-            _viewModel.saveLatLng(poi.latLng , poi.name)
+            _viewModel.saveLatLng(poi.latLng, poi.name)
             val poiMarker = map.addMarker(
                 MarkerOptions()
                     .position(poi.latLng)
@@ -155,7 +174,7 @@ class SelectLocationFragment : BaseFragment(), OnMapReadyCallback {
         map.setOnMapClickListener { latLng ->
             mLatLng = latLng
             map.clear()
-            _viewModel.saveLatLng(latLng , "Custom Location")
+            _viewModel.saveLatLng(latLng, "Custom Location")
             val poiMarker = map.addMarker(
                 MarkerOptions()
                     .position(latLng)
