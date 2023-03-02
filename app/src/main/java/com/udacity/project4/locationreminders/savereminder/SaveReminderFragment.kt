@@ -29,7 +29,6 @@ import com.udacity.project4.locationreminders.geofence.GeofenceBroadcastReceiver
 import com.udacity.project4.locationreminders.reminderslist.ReminderDataItem
 import com.udacity.project4.utils.setDisplayHomeAsUpEnabled
 import org.koin.android.ext.android.inject
-import java.util.concurrent.TimeUnit
 
 private const val REQUEST_TURN_DEVICE_LOCATION_ON = 29
 private const val TAG = "SaveReminderFragment"
@@ -50,11 +49,12 @@ class SaveReminderFragment : BaseFragment() {
     private val geofencePendingIntent by lazy {
         val intent = Intent(requireActivity(), GeofenceBroadcastReceiver::class.java)
         intent.action = GeofenceBroadcastReceiver.ACTION_GEOFENCE_EVENT
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            PendingIntent.getBroadcast(requireActivity(), 1, intent, PendingIntent.FLAG_IMMUTABLE)
-        } else {
-            PendingIntent.getBroadcast(requireActivity(), 1, intent, PendingIntent.FLAG_UPDATE_CURRENT)
-        }
+        PendingIntent.getBroadcast(
+            requireActivity(),
+            1,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT
+        )
     }
 
 
@@ -99,7 +99,6 @@ class SaveReminderFragment : BaseFragment() {
                 longitude = longitude
             )
             reminderDataItem?.let {
-                checkDeviceLocationSettingsAndStartGeofence()
                 checkPermissions()
             }
         }
@@ -114,7 +113,7 @@ class SaveReminderFragment : BaseFragment() {
 
     private fun checkDeviceLocationSettingsAndStartGeofence(resolve: Boolean = true) {
         val locationRequest = LocationRequest.create().apply {
-            priority = LocationRequest.PRIORITY_LOW_POWER
+            priority = LocationRequest.PRIORITY_HIGH_ACCURACY
         }
         val builder = LocationSettingsRequest.Builder().addLocationRequest(locationRequest)
         val settingsClient = LocationServices.getSettingsClient(requireActivity())
@@ -140,7 +139,10 @@ class SaveReminderFragment : BaseFragment() {
             }
         }
         locationSettingsResponseTask.addOnCompleteListener {
-            if (it.isSuccessful && reminderDataItem != null && _viewModel.validateEnteredData(reminderDataItem!!)) {
+            if (it.isSuccessful && reminderDataItem != null && _viewModel.validateEnteredData(
+                    reminderDataItem!!
+                )
+            ) {
                 addGeofence()
             }
         }
@@ -148,10 +150,10 @@ class SaveReminderFragment : BaseFragment() {
 
     private fun addGeofence() {
         val geofence = Geofence.Builder()
-            .setRequestId(reminderDataItem?.id)
+            .setRequestId(reminderDataItem!!.id)
             .setCircularRegion(
-                reminderDataItem?.latitude!!,
-                reminderDataItem?.longitude!!,
+                reminderDataItem!!.latitude!!,
+                reminderDataItem!!.longitude!!,
                 100f
             )
             .setExpirationDuration(Geofence.NEVER_EXPIRE)
@@ -170,10 +172,12 @@ class SaveReminderFragment : BaseFragment() {
         ) {
             checkPermissions()
         }
-        geofencingClient.addGeofences(geofenceRequest, geofencePendingIntent)?.run {
+        geofencingClient.addGeofences(geofenceRequest, geofencePendingIntent).run {
             addOnSuccessListener {
-                Toast.makeText(context, R.string.geofences_added,
-                    Toast.LENGTH_SHORT)
+                Toast.makeText(
+                    context, R.string.geofences_added,
+                    Toast.LENGTH_SHORT
+                )
                     .show()
                 Log.e("Add Geofence", geofence.requestId)
                 reminderDataItem?.let {
@@ -181,8 +185,10 @@ class SaveReminderFragment : BaseFragment() {
                 }
             }
             addOnFailureListener {
-                Toast.makeText(context, R.string.geofences_not_added,
-                    Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    context, R.string.geofences_not_added,
+                    Toast.LENGTH_SHORT
+                ).show()
                 if ((it.message != null)) {
                     Log.w(TAG, it.message!!)
                 }

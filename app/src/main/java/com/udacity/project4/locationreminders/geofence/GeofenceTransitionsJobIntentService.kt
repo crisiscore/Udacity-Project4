@@ -7,7 +7,6 @@ import androidx.core.app.JobIntentService
 import com.google.android.gms.location.Geofence
 import com.google.android.gms.location.Geofence.GEOFENCE_TRANSITION_ENTER
 import com.google.android.gms.location.GeofencingEvent
-import com.google.android.gms.location.LocationServices
 import com.udacity.project4.locationreminders.data.ReminderDataSource
 import com.udacity.project4.locationreminders.data.dto.ReminderDTO
 import com.udacity.project4.locationreminders.data.dto.Result
@@ -22,6 +21,7 @@ class GeofenceTransitionsJobIntentService : JobIntentService(), CoroutineScope {
     private var coroutineJob: Job = Job()
     override val coroutineContext: CoroutineContext
         get() = Dispatchers.IO + coroutineJob
+    private val dataSource: ReminderDataSource by inject()
 
     companion object {
         private const val JOB_ID = 567
@@ -43,9 +43,11 @@ class GeofenceTransitionsJobIntentService : JobIntentService(), CoroutineScope {
         }
 
         val geofenceTransition = geofencingEvent.geofenceTransition
-        if (geofenceTransition == GEOFENCE_TRANSITION_ENTER) {
-            Log.d("GeofenceTransitionsJob", "Enter: ${geofenceTransition}")
+        if (geofenceTransition == GEOFENCE_TRANSITION_ENTER && geofencingEvent.triggeringGeofences.isNotEmpty()) {
+            Log.d("GeofenceTransitionsJob", "Enter: ${geofencingEvent.triggeringLocation}")
             triggerAndSendNotification(geofencingEvent.triggeringGeofences)
+        }else{
+            Log.d("GeofenceTransitionsJob", "Never expired: $geofenceTransition")
         }
     }
 
@@ -53,9 +55,8 @@ class GeofenceTransitionsJobIntentService : JobIntentService(), CoroutineScope {
 
         triggeringGeofences.forEach {
             val requestId = it.requestId
-            val remindersLocalRepository: ReminderDataSource by inject()
             CoroutineScope(coroutineContext).launch(SupervisorJob()) {
-                val result = remindersLocalRepository.getReminder(requestId)
+                val result = dataSource.getReminder(requestId)
                 if (result is Result.Success<ReminderDTO>) {
                     Log.d("GeofenceTransitionsJob", "${result.data.title}")
                     val reminderDTO = result.data
@@ -73,5 +74,13 @@ class GeofenceTransitionsJobIntentService : JobIntentService(), CoroutineScope {
                 Log.d("GeofenceTransitionsJob", "Enter: not found")
             }
         }
+//        sendNotification(
+//            this@GeofenceTransitionsJobIntentService, ReminderDataItem(
+//                "Geofence Notification",
+//                "Inside Geofence",
+//                "Triggered by Geofence",
+//                0.4, 0.5
+//            )
+//        )
     }
 }

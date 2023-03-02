@@ -81,6 +81,7 @@ class SelectLocationFragment : BaseFragment(), OnMapReadyCallback {
         mLatLng?.let {
             _viewModel.navigationCommand.value =
                 NavigationCommand.Back
+            _viewModel.saveLatLng(it, _viewModel.reminderSelectedLocationStr.value ?: "Custom Location")
         }
     }
 
