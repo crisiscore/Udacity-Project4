@@ -1,16 +1,15 @@
 package com.udacity.project4.locationreminders.savereminder.selectreminderlocation
 
-
 import android.Manifest
-import android.content.Intent
+import android.app.AlertDialog
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Bundle
-import android.provider.Settings
+import android.os.Looper
 import android.view.*
 import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -19,8 +18,6 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.android.gms.maps.model.MarkerOptions
-import com.google.android.material.snackbar.Snackbar
-import com.udacity.project4.BuildConfig
 import com.udacity.project4.R
 import com.udacity.project4.base.BaseFragment
 import com.udacity.project4.base.NavigationCommand
@@ -41,6 +38,7 @@ class SelectLocationFragment : BaseFragment(), OnMapReadyCallback {
     private val fusedLocationProviderClient by lazy {
         LocationServices.getFusedLocationProviderClient(requireActivity())
     }
+    private lateinit var locationCallback: LocationCallback
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -56,6 +54,17 @@ class SelectLocationFragment : BaseFragment(), OnMapReadyCallback {
 
         val mapFragment = childFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
+
+        locationCallback = object : LocationCallback() {
+            override fun onLocationResult(locationResult: com.google.android.gms.location.LocationResult) {
+                super.onLocationResult(locationResult)
+                val lastLocation = locationResult.lastLocation
+                if (mLatLng == null) {
+                    mLatLng = LatLng(lastLocation.latitude, lastLocation.longitude)
+                    addCurrentLocationMarker(mLatLng!!)
+                }
+            }
+        }
 
         binding.btnSave.setOnClickListener {
             onLocationSelected()
@@ -124,22 +133,28 @@ class SelectLocationFragment : BaseFragment(), OnMapReadyCallback {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 enableMyLocation()
             } else {
-                Snackbar.make(
-                    binding.root,
-                    R.string.permission_denied_explanation,
-                    Snackbar.LENGTH_INDEFINITE
-                )
-                    .setAction(R.string.ok) {
-                        requestPermission()
-                    }.show()
+                showErrorDialog()
             }
         }
     }
 
-    private fun requestPermission(){
-        ActivityCompat.requestPermissions(
-            requireActivity(),
-            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION , Manifest.permission.ACCESS_COARSE_LOCATION),
+    private fun showErrorDialog() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Location Permission")
+            .setMessage(context?.resources?.getString(R.string.permission_denied_explanation))
+            .setPositiveButton("OK") { _, _ ->
+                requestPermission()
+            }
+            .create()
+            .show()
+    }
+
+    private fun requestPermission() {
+        requestPermissions(
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ),
             REQUEST_LOCATION_PERMISSION
         )
     }
@@ -152,25 +167,49 @@ class SelectLocationFragment : BaseFragment(), OnMapReadyCallback {
                 requireContext(),
                 Manifest.permission.ACCESS_COARSE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
-                    )) {
+                    )
+        ) {
             map.isMyLocationEnabled = true
             fusedLocationProviderClient.lastLocation.addOnSuccessListener { location ->
                 if (location != null) {
                     val currentLatLng = LatLng(location.latitude, location.longitude)
-                    map.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 15f))
-
-                    // add marker to current location
-                    val markerOptions = MarkerOptions()
-                        .position(currentLatLng)
-                        .title("Current Location")
-                    map.clear()
-                    val poiMarker = map.addMarker(markerOptions)
-                    poiMarker?.showInfoWindow()
+                    addCurrentLocationMarker(currentLatLng)
                 }
             }
+            val locationRequest = LocationRequest.create().apply {
+                interval = 10000
+                fastestInterval = 5000
+                priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+            }
+            fusedLocationProviderClient.requestLocationUpdates(
+                locationRequest,
+                locationCallback,
+                Looper.getMainLooper()
+            )
         } else {
             requestPermission()
         }
+    }
+
+    private fun addCurrentLocationMarker(currentLatLng: LatLng) {
+        map.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 15f))
+        mLatLng = currentLatLng
+        // add marker to current location
+        val markerOptions = MarkerOptions()
+            .position(currentLatLng)
+            .title(getString(R.string.str_current_location))
+        map.clear()
+        val poiMarker = map.addMarker(markerOptions)
+        poiMarker?.showInfoWindow()
+    }
+
+    private fun stopLocationUpdates() {
+        fusedLocationProviderClient.removeLocationUpdates(locationCallback)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        stopLocationUpdates()
     }
 
     private fun setPoiClick(map: GoogleMap) {

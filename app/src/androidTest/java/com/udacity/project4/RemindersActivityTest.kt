@@ -1,6 +1,5 @@
 package com.udacity.project4
 
-import android.app.Activity
 import android.app.Application
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider.getApplicationContext
@@ -11,7 +10,6 @@ import androidx.test.espresso.action.ViewActions
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.action.ViewActions.replaceText
 import androidx.test.espresso.assertion.ViewAssertions.matches
-import androidx.test.espresso.matcher.RootMatchers
 import androidx.test.espresso.matcher.ViewMatchers.*
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
@@ -22,11 +20,11 @@ import com.udacity.project4.locationreminders.data.local.RemindersLocalRepositor
 import com.udacity.project4.locationreminders.reminderslist.RemindersListViewModel
 import com.udacity.project4.locationreminders.savereminder.SaveReminderViewModel
 import com.udacity.project4.util.DataBindingIdlingResource
+import com.udacity.project4.util.ToastMatcher
 import com.udacity.project4.util.monitorActivity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
-import org.hamcrest.CoreMatchers
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -135,7 +133,7 @@ class RemindersActivityTest :
     @Test
     fun selectLocationValidat_showSnackBar() {
         val scenario = ActivityScenario.launch(RemindersActivity::class.java)
-         dataBindingIdlingResource.monitorActivity(scenario)
+        dataBindingIdlingResource.monitorActivity(scenario)
 
         onView(withId(R.id.addReminderFAB)).perform(click())
         onView(withId(R.id.reminderTitle)).check(matches(isDisplayed()))
@@ -174,4 +172,31 @@ class RemindersActivityTest :
         onView(withId(R.id.snackbar_text)).check(matches(withText(appContext.getString(R.string.err_select_location))))
         scenario.close()
     }
+
+    @Test
+    fun addSelectedLocation_saveReminder_showToastMessage() {
+        val scenario = ActivityScenario.launch(RemindersActivity::class.java)
+        dataBindingIdlingResource.monitorActivity(scenario)
+
+        onView(withId(R.id.addReminderFAB)).perform(click())
+        onView(withId(R.id.reminderTitle)).check(matches(isDisplayed()))
+        onView(withId(R.id.reminderTitle)).perform(replaceText(appContext.getString(R.string.reminder_title)))
+        onView(withId(R.id.reminderDescription)).perform(replaceText(appContext.getString(R.string.reminder_desc)))
+        onView(withId(R.id.btn_save_reminder)).perform(click())
+        onView(withId(R.id.selectLocation)).perform(click())
+        onView(withId(R.id.map)).perform(ViewActions.longClick())
+        onView(withId(R.id.btn_save)).perform(click())
+
+        onView(withText(appContext.getString(R.string.geofences_added)))
+            .inRoot(ToastMatcher().apply {
+                matches(isDisplayed())
+            })
+
+        onView(withText(appContext.getString(R.string.reminder_saved)))
+            .inRoot(ToastMatcher().apply {
+                matches(isDisplayed())
+            })
+        scenario.close()
+    }
 }
+

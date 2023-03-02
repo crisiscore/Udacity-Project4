@@ -71,8 +71,6 @@ class SaveReminderFragment : BaseFragment() {
 
         geofencingClient = LocationServices.getGeofencingClient(requireActivity())
 
-        checkPermissions()
-
         return binding.root
     }
 
@@ -102,6 +100,7 @@ class SaveReminderFragment : BaseFragment() {
             )
             reminderDataItem?.let {
                 checkDeviceLocationSettingsAndStartGeofence()
+                checkPermissions()
             }
         }
     }
@@ -173,7 +172,7 @@ class SaveReminderFragment : BaseFragment() {
         }
         geofencingClient.addGeofences(geofenceRequest, geofencePendingIntent)?.run {
             addOnSuccessListener {
-                Toast.makeText(requireContext(), R.string.geofences_added,
+                Toast.makeText(context, R.string.geofences_added,
                     Toast.LENGTH_SHORT)
                     .show()
                 Log.e("Add Geofence", geofence.requestId)
@@ -182,7 +181,7 @@ class SaveReminderFragment : BaseFragment() {
                 }
             }
             addOnFailureListener {
-                Toast.makeText(requireContext(), R.string.geofences_not_added,
+                Toast.makeText(context, R.string.geofences_not_added,
                     Toast.LENGTH_SHORT).show()
                 if ((it.message != null)) {
                     Log.w(TAG, it.message!!)
@@ -194,7 +193,7 @@ class SaveReminderFragment : BaseFragment() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_TURN_DEVICE_LOCATION_ON) {
-            checkDeviceLocationSettingsAndStartGeofence(false)
+            checkPermissions()
         }
     }
 
@@ -225,7 +224,7 @@ class SaveReminderFragment : BaseFragment() {
                     })
                 }.show()
         } else {
-            checkDeviceLocationSettingsAndStartGeofence()
+            checkPermissions()
         }
     }
 
