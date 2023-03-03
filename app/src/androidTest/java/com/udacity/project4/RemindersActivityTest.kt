@@ -20,16 +20,16 @@ import com.udacity.project4.locationreminders.data.local.LocalDB
 import com.udacity.project4.locationreminders.data.local.RemindersLocalRepository
 import com.udacity.project4.locationreminders.reminderslist.RemindersListViewModel
 import com.udacity.project4.locationreminders.savereminder.SaveReminderViewModel
-import com.udacity.project4.util.DataBindingIdlingResource
-import com.udacity.project4.util.monitorActivity
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import com.udacity.project4.utils.ToastManager
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runBlockingTest
 import kotlinx.coroutines.test.runTest
-import org.hamcrest.CoreMatchers.`is`
+import org.hamcrest.CoreMatchers.not
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.koin.android.ext.android.get
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
@@ -38,24 +38,17 @@ import org.koin.test.AutoCloseKoinTest
 import org.koin.test.get
 
 
-@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(AndroidJUnit4::class)
 @LargeTest
-//END TO END test to black box test the app
 class RemindersActivityTest :
-    AutoCloseKoinTest() {// Extended Koin Test - embed autoclose @after method to close Koin after every test
+    AutoCloseKoinTest() {
 
     private lateinit var repository: ReminderDataSource
     private lateinit var appContext: Application
-    private val dataBindingIdlingResource = DataBindingIdlingResource()
 
-    /**
-     * As we use Koin as a Service Locator Library to develop our code, we'll also use Koin to test our code.
-     * at this step we will initialize Koin related code to be able to use it in out testing.
-     */
     @Before
     fun init() {
-        stopKoin()//stop the original app koin
+        stopKoin()
         appContext = getApplicationContext()
         val myModule = module {
             viewModel {
@@ -73,34 +66,31 @@ class RemindersActivityTest :
             single { RemindersLocalRepository(get()) as ReminderDataSource }
             single { LocalDB.createRemindersDao(appContext) }
         }
-        //declare a new koin module
+
         startKoin {
             modules(listOf(myModule))
         }
-        //Get our real repository
         repository = get()
 
-        //clear the data to start fresh
         runBlocking {
             repository.deleteAllReminders()
         }
     }
 
-
     @Before
     fun registerIdlingResource() {
-        IdlingRegistry.getInstance().register(dataBindingIdlingResource)
+        IdlingRegistry.getInstance().register(ToastManager.getIdlingResource())
     }
 
     @After
     fun unregisterIdlingResource() {
-        IdlingRegistry.getInstance().unregister(dataBindingIdlingResource)
+        IdlingRegistry.getInstance().unregister(ToastManager.getIdlingResource())
     }
 
     @Test
-    fun clickingAddReminder_openSaveReminderScreen() = runTest {
+    fun clickingAddReminder_openbtn_save_reminderScreen() = runTest {
         val activityScenario = ActivityScenario.launch(RemindersActivity::class.java)
-        dataBindingIdlingResource.monitorActivity(activityScenario)
+
         onView(withId(R.id.addReminderFAB)).perform(click())
         onView(withId(R.id.reminderTitle)).check(matches(isDisplayed()))
         activityScenario.close()
@@ -109,7 +99,7 @@ class RemindersActivityTest :
     @Test
     fun validate_EnteredData() = runTest {
         val activityScenario = ActivityScenario.launch(RemindersActivity::class.java)
-        dataBindingIdlingResource.monitorActivity(activityScenario)
+
 
         onView(withId(R.id.addReminderFAB)).perform(click())
         onView(withId(R.id.btn_save_reminder)).perform(click())
@@ -121,7 +111,7 @@ class RemindersActivityTest :
     @Test
     fun click_BackButton() = runTest {
         val activityScenario = ActivityScenario.launch(RemindersActivity::class.java)
-        dataBindingIdlingResource.monitorActivity(activityScenario)
+
 
         onView(withId(R.id.addReminderFAB)).perform(click())
         onView(withId(R.id.btn_save_reminder)).perform(click())
@@ -135,7 +125,6 @@ class RemindersActivityTest :
     @Test
     fun selectLocationValidat_showSnackBar() {
         val scenario = ActivityScenario.launch(RemindersActivity::class.java)
-        dataBindingIdlingResource.monitorActivity(scenario)
 
         onView(withId(R.id.addReminderFAB)).perform(click())
         onView(withId(R.id.reminderTitle)).check(matches(isDisplayed()))
@@ -149,9 +138,8 @@ class RemindersActivityTest :
     }
 
     @Test
-    fun saveReminderValidateTitle_showSnackBar() {
+    fun btn_save_reminderValidateTitle_showSnackBar() {
         val scenario = ActivityScenario.launch(RemindersActivity::class.java)
-        dataBindingIdlingResource.monitorActivity(scenario)
 
         onView(withId(R.id.addReminderFAB)).perform(click())
         onView(withId(R.id.reminderTitle)).check(matches(isDisplayed()))
@@ -162,9 +150,8 @@ class RemindersActivityTest :
     }
 
     @Test
-    fun saveReminderValidateLocation_showSnackBar() {
+    fun btn_save_reminderValidateLocation_showSnackBar() {
         val scenario = ActivityScenario.launch(RemindersActivity::class.java)
-        dataBindingIdlingResource.monitorActivity(scenario)
 
         onView(withId(R.id.addReminderFAB)).perform(click())
         onView(withId(R.id.reminderTitle)).check(matches(isDisplayed()))
@@ -177,34 +164,39 @@ class RemindersActivityTest :
 
     @Test
     fun addSelectedLocation_saveReminder_showToastMessage() {
-        val activityScenario = ActivityScenario.launch(RemindersActivity::class.java)
-        dataBindingIdlingResource.monitorActivity(activityScenario)
-
+        val scenario = ActivityScenario.launch(RemindersActivity::class.java)
         onView(withId(R.id.addReminderFAB)).perform(click())
-
-        onView(withId(R.id.reminderTitle)).check(matches(isDisplayed()))
         onView(withId(R.id.reminderTitle)).check(matches(isDisplayed()))
         onView(withId(R.id.reminderTitle)).perform(replaceText(appContext.getString(R.string.reminder_title)))
         onView(withId(R.id.reminderDescription)).perform(replaceText(appContext.getString(R.string.reminder_desc)))
         onView(withId(R.id.selectLocation)).perform(click())
-        onView(withId(R.id.map)).perform(ViewActions.longClick())
-        Thread.sleep(2000)
+        onView(withId(R.id.map)).perform(longClick())
         onView(withId(R.id.btn_save)).perform(click())
-        Thread.sleep(2000)
         onView(withId(R.id.btn_save_reminder)).perform(click())
-        onView(withText(R.string.reminder_saved))
-            .inRoot(withDecorView(`is`(getActivity(activityScenario).window.decorView)))
-        activityScenario.close()
+
+        onView(withText("Geofence Added"))
+            .inRoot(withDecorView(not(getActivity(scenario)?.window?.decorView)))
+            .check(
+                matches(isDisplayed())
+            )
+
+        ToastManager.increment()
+        onView(withText("Reminder Saved !"))
+            .inRoot(withDecorView(not(getActivity(scenario)?.window?.decorView)))
+            .check(
+                matches(isDisplayed())
+            )
+        scenario.close()
     }
 
-    private fun getActivity(activityScenario: ActivityScenario<RemindersActivity>): Activity {
-        lateinit var activity: Activity
-        activityScenario.onActivity {
+
+    private fun getActivity(scenario: ActivityScenario<RemindersActivity>): Activity? {
+        var activity: Activity? = null
+        scenario.onActivity {
             activity = it
         }
         return activity
     }
-
 
 }
 
