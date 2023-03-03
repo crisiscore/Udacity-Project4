@@ -100,7 +100,6 @@ class RemindersActivityTest :
     fun validate_EnteredData() = runTest {
         val activityScenario = ActivityScenario.launch(RemindersActivity::class.java)
 
-
         onView(withId(R.id.addReminderFAB)).perform(click())
         onView(withId(R.id.btn_save_reminder)).perform(click())
 
@@ -123,17 +122,16 @@ class RemindersActivityTest :
     }
 
     @Test
-    fun selectLocationValidat_showSnackBar() {
+    fun selectLocationValidate_showSnackBar() {
         val scenario = ActivityScenario.launch(RemindersActivity::class.java)
-
         onView(withId(R.id.addReminderFAB)).perform(click())
         onView(withId(R.id.reminderTitle)).check(matches(isDisplayed()))
-        onView(withId(R.id.reminderTitle)).perform(replaceText(appContext.getString(R.string.reminder_title)))
         onView(withId(R.id.reminderDescription)).perform(replaceText(appContext.getString(R.string.reminder_desc)))
         onView(withId(R.id.selectLocation)).perform(click())
-        onView(withId(R.id.map)).perform(ViewActions.longClick())
+        onView(withId(R.id.map)).perform(longClick())
         onView(withId(R.id.btn_save)).perform(click())
-        onView(withId(R.id.snackbar_text)).check(matches(withText(appContext.getString(R.string.err_select_location))))
+        onView(withId(R.id.btn_save_reminder)).perform(click())
+        onView(withId(R.id.snackbar_text)).check(matches(withText(appContext.getString(R.string.err_enter_title))))
         scenario.close()
     }
 
@@ -146,19 +144,6 @@ class RemindersActivityTest :
         onView(withId(R.id.reminderDescription)).perform(replaceText(appContext.getString(R.string.reminder_desc)))
         onView(withId(R.id.btn_save_reminder)).perform(click())
         onView(withId(R.id.snackbar_text)).check(matches(withText(appContext.getString(R.string.err_enter_title))))
-        scenario.close()
-    }
-
-    @Test
-    fun btn_save_reminderValidateLocation_showSnackBar() {
-        val scenario = ActivityScenario.launch(RemindersActivity::class.java)
-
-        onView(withId(R.id.addReminderFAB)).perform(click())
-        onView(withId(R.id.reminderTitle)).check(matches(isDisplayed()))
-        onView(withId(R.id.reminderTitle)).perform(replaceText(appContext.getString(R.string.reminder_title)))
-        onView(withId(R.id.reminderDescription)).perform(replaceText(appContext.getString(R.string.reminder_desc)))
-        onView(withId(R.id.btn_save_reminder)).perform(click())
-        onView(withId(R.id.snackbar_text)).check(matches(withText(appContext.getString(R.string.err_select_location))))
         scenario.close()
     }
 
